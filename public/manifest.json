@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Validador-CSV",
+  "name": "App Validador de CSV",
   "icons": [
     {
       "src": "favicon.ico",
