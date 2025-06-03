@@ -27,6 +27,51 @@ const CsvTable = ({ rows }) => {
     return [0, 0.3]; // fallback genérico
   };
 
+  // Calcular as diferenças e o total
+  let totalDiferenca = 0;
+  const rowsWithDifference = rows.map((row, i) => {
+    const bruto = parseFloatPt(row["VALOR BRUTO"]);
+    const liquido = parseFloatPt(row["VALOR LIQUIDO"]);
+    const desconto = parseFloatPt(row["DESCONTO DE MDR"]);
+    const parcelas = row["N DE PARCELAS"];
+
+    const taxa = (bruto - liquido) / bruto;
+    const [min, max] = getExpectedRange(parcelas);
+    
+    const tolerance = 0.0001;
+    const taxaOk = taxa >= (min - tolerance) && taxa <= (max + tolerance);
+
+    const descontoCalculado = bruto - liquido;
+    const descontoOk = Math.abs(descontoCalculado - Math.abs(desconto)) < 0.01;
+
+    // Calcular diferença quando fora da faixa
+    let diferenca = 0;
+    if (!taxaOk) {
+      if (taxa < min) {
+        diferenca = (min - taxa) * bruto;
+      } else if (taxa > max) {
+        diferenca = (taxa - max) * bruto;
+      }
+      totalDiferenca += diferenca;
+    }
+
+    console.log(`Linha ${i}: Taxa=${taxa.toFixed(6)}, Min=${min}, Max=${max}, TaxaOk=${taxaOk}`);
+
+    return {
+      ...row,
+      bruto,
+      liquido,
+      desconto,
+      parcelas,
+      taxa,
+      min,
+      max,
+      taxaOk,
+      descontoOk,
+      diferenca
+    };
+  });
+
   return (
     <table border="1" cellPadding="10" style={{ marginTop: "2rem", width: "100%" }}>
       <thead>
@@ -37,46 +82,36 @@ const CsvTable = ({ rows }) => {
           <th>Taxa Efetiva</th>
           <th>Validação Taxa</th>
           <th>Validação Cálculo</th>
+          <th>Diferença (R$)</th>
         </tr>
       </thead>
       <tbody>
-        {rows.map((row, i) => {
-          const bruto = parseFloatPt(row["VALOR BRUTO"]);
-          const liquido = parseFloatPt(row["VALOR LIQUIDO"]);
-          const desconto = parseFloatPt(row["DESCONTO DE MDR"]);
-          const parcelas = row["N DE PARCELAS"];
-
-          const taxa = (bruto - liquido) / bruto;
-          const [min, max] = getExpectedRange(parcelas);
-          
-          // Adicionar uma pequena tolerância para problemas de precisão
-          const tolerance = 0.0001;
-          const taxaOk = taxa >= (min - tolerance) && taxa <= (max + tolerance);
-
-          const descontoCalculado = bruto - liquido;
-          const descontoOk = Math.abs(descontoCalculado - Math.abs(desconto)) < 0.01;
-
-          // Debug: adicionar console.log para verificar os valores
-          console.log(`Linha ${i}: Taxa=${taxa.toFixed(6)}, Min=${min}, Max=${max}, TaxaOk=${taxaOk}`);
-
+        {rowsWithDifference.map((rowData, i) => {
           return (
             <tr
               key={i}
               style={{
-                backgroundColor: descontoOk ? (taxaOk ? "#e0ffe0" : "#ffffcc") : "#ffe0e0",
+                backgroundColor: rowData.descontoOk ? (rowData.taxaOk ? "#e0ffe0" : "#ffffcc") : "#ffe0e0",
               }}
             >
               {headers.map((header, idx) => (
-                <td key={idx}>{row[header]}</td>
+                <td key={idx}>{rowData[header]}</td>
               ))}
-              <td>{formatPercent(taxa)}</td>
+              <td>{formatPercent(rowData.taxa)}</td>
               <td>
-                {taxaOk ? "✔️ Dentro da faixa" : `⚠️ Fora da faixa (${formatPercent(min)}-${formatPercent(max)})`}
+                {rowData.taxaOk ? "✔️ Dentro da faixa" : `⚠️ Fora da faixa (${formatPercent(rowData.min)}-${formatPercent(rowData.max)})`}
               </td>
-              <td>{descontoOk ? "✅ OK" : "❌ Cálculo Incorreto"}</td>
+              <td>{rowData.descontoOk ? "✅ OK" : "❌ Cálculo Incorreto"}</td>
+              <td>
+                {rowData.taxaOk ? "-" : formatCurrency(rowData.diferenca)}
+              </td>
             </tr>
           );
         })}
+        <tr style={{ backgroundColor: "#f0f0f0", fontWeight: "bold" }}>
+          <td colSpan={headers.length + 3}>Total das Diferenças:</td>
+          <td>{formatCurrency(totalDiferenca)}</td>
+        </tr>
       </tbody>
     </table>
   );
