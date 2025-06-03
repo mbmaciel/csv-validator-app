@@ -1,4 +1,17 @@
 import React from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Chip,
+  Typography,
+  Box
+} from "@mui/material";
+import { CheckCircle, Warning, Error } from "@mui/icons-material";
 
 const parseFloatPt = (str) =>
   parseFloat(str.replace(/\./g, "").replace(",", "."));
@@ -20,11 +33,11 @@ const CsvTable = ({ rows }) => {
 
   const getExpectedRange = (parcelas) => {
     const p = parseInt(parcelas);
-    if (p === 1) return [0.0123, 0.0131]; // Aumentei a tolerância
+    if (p === 1) return [0.0123, 0.0131];
     if (p === 2) return [0.0300, 0.0305];
     if (p === 4) return [0.0300, 0.0305];
     if (p === 10) return [0.0323, 0.0328];
-    return [0, 0.3]; // fallback genérico
+    return [0, 0.3];
   };
 
   // Calcular as diferenças e o total
@@ -72,48 +85,186 @@ const CsvTable = ({ rows }) => {
     };
   });
 
+  const getRowColor = (taxaOk, descontoOk) => {
+    if (descontoOk && taxaOk) return "#e8f5e8";
+    if (descontoOk && !taxaOk) return "#fff3cd";
+    return "#f8d7da";
+  };
+
   return (
-    <table border="1" cellPadding="10" style={{ marginTop: "2rem", width: "100%" }}>
-      <thead>
-        <tr>
-          {headers.map((header, idx) => (
-            <th key={idx}>{header}</th>
-          ))}
-          <th>Taxa Efetiva</th>
-          <th>Validação Taxa</th>
-          <th>Validação Cálculo</th>
-          <th>Diferença (R$)</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rowsWithDifference.map((rowData, i) => {
-          return (
-            <tr
+    <TableContainer 
+      component={Paper} 
+      elevation={0}
+      sx={{
+        maxHeight: '70vh',
+        overflow: 'auto',
+        '&::-webkit-scrollbar': {
+          width: '8px',
+          height: '8px',
+        },
+        '&::-webkit-scrollbar-track': {
+          backgroundColor: '#f1f1f1',
+          borderRadius: '4px',
+        },
+        '&::-webkit-scrollbar-thumb': {
+          backgroundColor: '#c1c1c1',
+          borderRadius: '4px',
+          '&:hover': {
+            backgroundColor: '#a8a8a8',
+          },
+        },
+      }}
+    >
+      <Table sx={{ minWidth: 1200 }} size="small" stickyHeader>
+        <TableHead>
+          <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+            {headers.map((header, idx) => (
+              <TableCell 
+                key={idx} 
+                sx={{ 
+                  fontWeight: 'bold',
+                  backgroundColor: '#f5f5f5',
+                  minWidth: header.length > 15 ? '180px' : '120px',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {header}
+              </TableCell>
+            ))}
+            <TableCell sx={{ 
+              fontWeight: 'bold', 
+              backgroundColor: '#f5f5f5',
+              minWidth: '120px',
+              whiteSpace: 'nowrap'
+            }}>
+              Taxa Efetiva
+            </TableCell>
+            <TableCell sx={{ 
+              fontWeight: 'bold', 
+              backgroundColor: '#f5f5f5',
+              minWidth: '200px',
+              whiteSpace: 'nowrap'
+            }}>
+              Validação Taxa
+            </TableCell>
+            <TableCell sx={{ 
+              fontWeight: 'bold', 
+              backgroundColor: '#f5f5f5',
+              minWidth: '150px',
+              whiteSpace: 'nowrap'
+            }}>
+              Validação Cálculo
+            </TableCell>
+            <TableCell sx={{ 
+              fontWeight: 'bold', 
+              backgroundColor: '#f5f5f5',
+              minWidth: '130px',
+              whiteSpace: 'nowrap'
+            }}>
+              Diferença (R$)
+            </TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {rowsWithDifference.map((rowData, i) => (
+            <TableRow
               key={i}
-              style={{
-                backgroundColor: rowData.descontoOk ? (rowData.taxaOk ? "#e0ffe0" : "#ffffcc") : "#ffe0e0",
+              sx={{
+                backgroundColor: getRowColor(rowData.taxaOk, rowData.descontoOk),
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                }
               }}
             >
               {headers.map((header, idx) => (
-                <td key={idx}>{rowData[header]}</td>
+                <TableCell 
+                  key={idx}
+                  sx={{ 
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    maxWidth: '200px'
+                  }}
+                  title={rowData[header]} // Tooltip para ver o valor completo
+                >
+                  {rowData[header]}
+                </TableCell>
               ))}
-              <td>{formatPercent(rowData.taxa)}</td>
-              <td>
-                {rowData.taxaOk ? "✔️ Dentro da faixa" : `⚠️ Fora da faixa (${formatPercent(rowData.min)}-${formatPercent(rowData.max)})`}
-              </td>
-              <td>{rowData.descontoOk ? "✅ OK" : "❌ Cálculo Incorreto"}</td>
-              <td>
-                {rowData.taxaOk ? "-" : formatCurrency(rowData.diferenca)}
-              </td>
-            </tr>
-          );
-        })}
-        <tr style={{ backgroundColor: "#f0f0f0", fontWeight: "bold" }}>
-          <td colSpan={headers.length + 3}>Total das Diferenças:</td>
-          <td>{formatCurrency(totalDiferenca)}</td>
-        </tr>
-      </tbody>
-    </table>
+              <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                <Typography variant="body2" fontWeight="medium">
+                  {formatPercent(rowData.taxa)}
+                </Typography>
+              </TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                {rowData.taxaOk ? (
+                  <Chip
+                    icon={<CheckCircle />}
+                    label="Dentro da faixa"
+                    color="success"
+                    size="small"
+                  />
+                ) : (
+                  <Chip
+                    icon={<Warning />}
+                    label={`Fora da faixa (${formatPercent(rowData.min)}-${formatPercent(rowData.max)})`}
+                    color="warning"
+                    size="small"
+                  />
+                )}
+              </TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                {rowData.descontoOk ? (
+                  <Chip
+                    icon={<CheckCircle />}
+                    label="OK"
+                    color="success"
+                    size="small"
+                  />
+                ) : (
+                  <Chip
+                    icon={<Error />}
+                    label="Cálculo Incorreto"
+                    color="error"
+                    size="small"
+                  />
+                )}
+              </TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                <Typography 
+                  variant="body2" 
+                  fontWeight="medium"
+                  color={rowData.taxaOk ? "text.secondary" : "error.main"}
+                >
+                  {rowData.taxaOk ? "-" : formatCurrency(rowData.diferenca)}
+                </Typography>
+              </TableCell>
+            </TableRow>
+          ))}
+          <TableRow sx={{ backgroundColor: '#e3f2fd' }}>
+            <TableCell 
+              colSpan={headers.length + 3} 
+              sx={{ 
+                fontWeight: 'bold', 
+                fontSize: '1.1rem',
+                whiteSpace: 'nowrap',
+                backgroundColor: '#e3f2fd'
+              }}
+            >
+              <Box display="flex" alignItems="center">
+                <Typography variant="h6" color="primary">
+                  Total das Diferenças:
+                </Typography>
+              </Box>
+            </TableCell>
+            <TableCell sx={{ backgroundColor: '#e3f2fd', whiteSpace: 'nowrap' }}>
+              <Typography variant="h6" color="error.main" fontWeight="bold">
+                {formatCurrency(totalDiferenca)}
+              </Typography>
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+    </TableContainer>
   );
 };
 
