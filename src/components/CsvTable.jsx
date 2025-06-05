@@ -86,9 +86,9 @@ const CsvTable = ({ rows }) => {
   });
 
   const getRowColor = (taxaOk, descontoOk) => {
-    if (descontoOk && taxaOk) return "#e8f5e8";
-    if (descontoOk && !taxaOk) return "#fff3cd";
-    return "#f8d7da";
+    if (descontoOk && taxaOk) return "#f0f9f0"; // Light green
+    if (descontoOk && !taxaOk) return "#fff8e1"; // Light amber
+    return "#ffebee"; // Light red
   };
 
   return (
@@ -98,32 +98,36 @@ const CsvTable = ({ rows }) => {
       sx={{
         maxHeight: '70vh',
         overflow: 'auto',
+        border: '1px solid #e2e8f0',
+        borderRadius: 2,
         '&::-webkit-scrollbar': {
           width: '8px',
           height: '8px',
         },
         '&::-webkit-scrollbar-track': {
-          backgroundColor: '#f1f1f1',
+          backgroundColor: '#f1f5f9',
           borderRadius: '4px',
         },
         '&::-webkit-scrollbar-thumb': {
-          backgroundColor: '#c1c1c1',
+          backgroundColor: '#cbd5e1',
           borderRadius: '4px',
           '&:hover': {
-            backgroundColor: '#a8a8a8',
+            backgroundColor: '#94a3b8',
           },
         },
       }}
     >
       <Table sx={{ minWidth: 1200 }} size="small" stickyHeader>
         <TableHead>
-          <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+          <TableRow>
             {headers.map((header, idx) => (
               <TableCell 
                 key={idx} 
                 sx={{ 
                   fontWeight: 'bold',
-                  backgroundColor: '#f5f5f5',
+                  backgroundColor: '#f8fafc',
+                  borderBottom: '2px solid #e2e8f0',
+                  color: '#1a202c',
                   minWidth: header.length > 15 ? '180px' : '120px',
                   whiteSpace: 'nowrap'
                 }}
@@ -133,7 +137,9 @@ const CsvTable = ({ rows }) => {
             ))}
             <TableCell sx={{ 
               fontWeight: 'bold', 
-              backgroundColor: '#f5f5f5',
+              backgroundColor: '#f8fafc',
+              borderBottom: '2px solid #e2e8f0',
+              color: '#1a202c',
               minWidth: '120px',
               whiteSpace: 'nowrap'
             }}>
@@ -141,7 +147,9 @@ const CsvTable = ({ rows }) => {
             </TableCell>
             <TableCell sx={{ 
               fontWeight: 'bold', 
-              backgroundColor: '#f5f5f5',
+              backgroundColor: '#f8fafc',
+              borderBottom: '2px solid #e2e8f0',
+              color: '#1a202c',
               minWidth: '200px',
               whiteSpace: 'nowrap'
             }}>
@@ -149,7 +157,9 @@ const CsvTable = ({ rows }) => {
             </TableCell>
             <TableCell sx={{ 
               fontWeight: 'bold', 
-              backgroundColor: '#f5f5f5',
+              backgroundColor: '#f8fafc',
+              borderBottom: '2px solid #e2e8f0',
+              color: '#1a202c',
               minWidth: '150px',
               whiteSpace: 'nowrap'
             }}>
@@ -157,7 +167,9 @@ const CsvTable = ({ rows }) => {
             </TableCell>
             <TableCell sx={{ 
               fontWeight: 'bold', 
-              backgroundColor: '#f5f5f5',
+              backgroundColor: '#f8fafc',
+              borderBottom: '2px solid #e2e8f0',
+              color: '#1a202c',
               minWidth: '130px',
               whiteSpace: 'nowrap'
             }}>
@@ -172,8 +184,9 @@ const CsvTable = ({ rows }) => {
               sx={{
                 backgroundColor: getRowColor(rowData.taxaOk, rowData.descontoOk),
                 '&:hover': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                }
+                  backgroundColor: 'rgba(46, 91, 186, 0.04)',
+                },
+                borderBottom: '1px solid #f1f5f9',
               }}
             >
               {headers.map((header, idx) => (
@@ -202,6 +215,7 @@ const CsvTable = ({ rows }) => {
                     label="Dentro da faixa"
                     color="success"
                     size="small"
+                    sx={{ fontWeight: 500 }}
                   />
                 ) : (
                   <Chip
@@ -209,6 +223,7 @@ const CsvTable = ({ rows }) => {
                     label={`Fora da faixa (${formatPercent(rowData.min)}-${formatPercent(rowData.max)})`}
                     color="warning"
                     size="small"
+                    sx={{ fontWeight: 500 }}
                   />
                 )}
               </TableCell>
@@ -219,6 +234,7 @@ const CsvTable = ({ rows }) => {
                     label="OK"
                     color="success"
                     size="small"
+                    sx={{ fontWeight: 500 }}
                   />
                 ) : (
                   <Chip
@@ -226,6 +242,7 @@ const CsvTable = ({ rows }) => {
                     label="Cálculo Incorreto"
                     color="error"
                     size="small"
+                    sx={{ fontWeight: 500 }}
                   />
                 )}
               </TableCell>
@@ -247,7 +264,8 @@ const CsvTable = ({ rows }) => {
                 fontWeight: 'bold', 
                 fontSize: '1.1rem',
                 whiteSpace: 'nowrap',
-                backgroundColor: '#e3f2fd'
+                backgroundColor: '#e8f4fd',
+                borderTop: '2px solid #2E5BBA',
               }}
             >
               <Box display="flex" alignItems="center">
@@ -256,7 +274,11 @@ const CsvTable = ({ rows }) => {
                 </Typography>
               </Box>
             </TableCell>
-            <TableCell sx={{ backgroundColor: '#e3f2fd', whiteSpace: 'nowrap' }}>
+            <TableCell sx={{ 
+              backgroundColor: '#e8f4fd', 
+              whiteSpace: 'nowrap',
+              borderTop: '2px solid #2E5BBA',
+            }}>
               <Typography variant="h6" color="error.main" fontWeight="bold">
                 {formatCurrency(totalDiferenca)}
               </Typography>
