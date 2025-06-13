@@ -28,11 +28,17 @@ const formatPercent = (value) => {
   return `${formattedValue.replace(".", ",")}%`;
 };
 
-const CsvTable = ({ rows }) => {
+const CsvTable = ({ rows, customRates }) => {
   const headers = Object.keys(rows[0]);
 
   const getExpectedRange = (parcelas) => {
     const p = parseInt(parcelas);
+
+    if (customRates && customRates[p]) {
+      const { min, max } = customRates[p];
+      return [min / 100, max / 100];
+    }
+
     if (p === 1) return [0.0123, 0.0131];
     if (p === 2) return [0.0300, 0.0305];
     if (p === 4) return [0.0300, 0.0305];
