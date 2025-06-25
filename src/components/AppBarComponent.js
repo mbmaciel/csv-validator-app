@@ -21,9 +21,11 @@ import {
   Menu as MenuIcon,
   Assessment,
   InsertDriveFile,
-  Close
+  Close,
+  Logout as LogoutIcon
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const LogoImage = styled('img')({
   height: '80px',
@@ -35,6 +37,7 @@ const LogoImage = styled('img')({
 const AppBarComponent = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -102,6 +105,14 @@ const AppBarComponent = () => {
                   {item.text}
                 </Button>
               ))}
+              <Button
+                color="inherit"
+                startIcon={<LogoutIcon />}
+                onClick={logout}
+                sx={{ textTransform: 'none' }}
+              >
+                Sair
+              </Button>
             </Box>
           )}
 
@@ -181,6 +192,19 @@ const AppBarComponent = () => {
         </List>
 
         <Box sx={{ mt: 'auto', p: 2, borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+          <Button
+            fullWidth
+            variant="contained"
+            color="secondary"
+            startIcon={<LogoutIcon />}
+            onClick={() => {
+              logout();
+              setMobileMenuOpen(false);
+            }}
+            sx={{ mb: 2 }}
+          >
+            Sair
+          </Button>
           <Typography variant="body2" sx={{ opacity: 0.7, textAlign: 'center' }}>
             Aplicativo Delator
           </Typography>
