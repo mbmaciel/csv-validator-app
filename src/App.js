@@ -5,6 +5,7 @@ import {
   createTheme,
   CssBaseline,
 } from "@mui/material";
+import { OperadoraProvider } from "./context/OperadoraContext";
 import Home from "./pages/Home";
 import Documentos from "./pages/Documentos";
 
@@ -53,12 +54,14 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Router>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/documentos" element={<Documentos />} />
-        </Routes>
-      </Router>
+      <OperadoraProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/documentos" element={<Documentos />} />
+          </Routes>
+        </Router>
+      </OperadoraProvider>
     </ThemeProvider>
   );
 }

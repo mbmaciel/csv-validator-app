@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Papa from "papaparse";
 import CsvTable from "../components/CsvTable";
+import CsvCielo from "../components/CsvCielo";
 import AppBarComponent from "../components/AppBarComponent";
 import {
   Container,
@@ -26,6 +27,41 @@ import { Upload, CloudUpload, Settings, ExpandMore } from "@mui/icons-material";
 const Input = styled('input')({
   display: 'none',
 });
+
+// Função para processar CSV da Cielo
+const parseCieloCsv = (csvText) => {
+  const lines = csvText.split('\n');
+  
+  // Encontrar onde começam os dados (procurar pela linha com os headers)
+  const headerLine = lines.findIndex(line => 
+    line.includes('Data da venda') && 
+    line.includes('Forma de pagamento') && 
+    line.includes('Valor bruto')
+  );
+  
+  if (headerLine === -1) {
+    throw new Error('Formato de CSV da Cielo não reconhecido. Verifique se o arquivo contém os headers esperados.');
+  }
+  
+  // Extrair headers
+  const headers = lines[headerLine].split(';');
+  
+  // Processar dados a partir da linha seguinte aos headers
+  const dataLines = lines.slice(headerLine + 1).filter(line => line.trim() !== '');
+  
+  const rows = dataLines.map(line => {
+    const values = line.split(';');
+    const row = {};
+    
+    headers.forEach((header, index) => {
+      row[header.trim()] = values[index] ? values[index].trim() : '';
+    });
+    
+    return row;
+  });
+  
+  return rows.filter(row => row['Valor bruto'] && row['Valor bruto'] !== '');
+};
 
 const Home = () => {
   const [data, setData] = useState([]);
@@ -53,6 +89,9 @@ const Home = () => {
 
   const handleFileTypeChange = (event) => {
     setFileType(event.target.value);
+    // Limpar dados quando trocar de operadora
+    setData([]);
+    setSelectedFile(null);
     if (uploadStatus) {
       setUploadStatus(null);
     }
@@ -74,49 +113,114 @@ const Home = () => {
     setLoading(true);
     setUploadStatus(null);
 
-    // Parse do CSV para exibição
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      delimiter: ";",
-      complete: async (result) => {
-        setData(result.data);
-        
-        // Upload do arquivo para o servidor
-        try {
-          const formData = new FormData();
-          formData.append('csvFile', file);
-          formData.append('fileType', fileType);
+    try {
+      const text = await file.text();
+      let parsedData;
 
-          const response = await fetch('http://localhost:5000/api/upload', {
-            method: 'POST',
-            body: formData,
+      // Processar baseado na operadora selecionada
+      if (fileType === 'cielo') {
+        parsedData = parseCieloCsv(text);
+      } else {
+        // Para Stone e outras operadoras, usar Papa Parse
+        const result = await new Promise((resolve) => {
+          Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            delimiter: ";",
+            complete: (result) => resolve(result),
           });
+        });
+        parsedData = result.data;
+      }
 
-          if (response.ok) {
-            const result = await response.json();
-            setUploadStatus({
-              type: 'success',
-              message: `Arquivo "${result.originalName}" salvo com sucesso no servidor!`
-            });
-          } else {
-            const error = await response.json();
-            setUploadStatus({
-              type: 'error',
-              message: `Erro ao salvar arquivo: ${error.error}`
-            });
-          }
-        } catch (error) {
+      if (parsedData.length === 0) {
+        throw new Error('Nenhum dado válido encontrado no arquivo CSV.');
+      }
+
+      setData(parsedData);
+      
+      // Upload do arquivo para o servidor
+      try {
+        const formData = new FormData();
+        formData.append('csvFile', file);
+        formData.append('fileType', fileType);
+
+        const response = await fetch('http://localhost:5000/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (response.ok) {
+          const result = await response.json();
           setUploadStatus({
-            type: 'error',
-            message: 'Erro de conexão com o servidor'
+            type: 'success',
+            message: `Arquivo "${result.originalName}" processado e salvo com sucesso! ${parsedData.length} registros carregados.`
           });
-        } finally {
-          setLoading(false);
+        } else {
+          const error = await response.json();
+          setUploadStatus({
+            type: 'warning',
+            message: `Arquivo processado localmente (${parsedData.length} registros), mas erro ao salvar no servidor: ${error.error}`
+          });
         }
-      },
-    });
+      } catch (serverError) {
+        setUploadStatus({
+          type: 'warning',
+          message: `Arquivo processado localmente (${parsedData.length} registros), mas erro de conexão com o servidor.`
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao processar arquivo:', error);
+      setUploadStatus({
+        type: 'error',
+        message: `Erro ao processar arquivo: ${error.message}`
+      });
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const getOperadoraInfo = () => {
+    switch (fileType) {
+      case 'stone':
+        return {
+          name: 'Stone',
+          format: 'CSV com separador ponto e vírgula (;)',
+          description: 'Colunas esperadas: VALOR BRUTO, VALOR LIQUIDO, DESCONTO DE MDR, N DE PARCELAS'
+        };
+      case 'cielo':
+        return {
+          name: 'Cielo',
+          format: 'CSV com separador ponto e vírgula (;)',
+          description: 'Colunas esperadas: Data da venda, Forma de pagamento, Valor bruto, Taxa/tarifa, Valor líquido'
+        };
+      case 'american':
+        return {
+          name: 'American Express',
+          format: 'CSV com separador ponto e vírgula (;)',
+          description: 'Formato similar ao Stone'
+        };
+      default:
+        return null;
+    }
+  };
+
+  const renderTable = () => {
+    if (!data.length || !fileType) return null;
+
+    switch (fileType) {
+      case 'stone':
+      case 'american':
+        return <CsvTable rows={data} customRates={customRates} />;
+      case 'cielo':
+        return <CsvCielo rows={data} customRates={customRates} />;
+      default:
+        return null;
+    }
+  };
+
+  const operadoraInfo = getOperadoraInfo();
 
   return (
     <>
@@ -135,7 +239,7 @@ const Home = () => {
             Upload do Arquivo CSV
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-            Selecione um arquivo CSV para validar os cálculos de MDR. O arquivo será salvo no servidor para consulta posterior.
+            Selecione a operadora e um arquivo CSV para validar os cálculos de MDR. O arquivo será salvo no servidor para consulta posterior.
           </Typography>
           
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2, flexWrap: 'wrap' }}>
@@ -157,7 +261,7 @@ const Home = () => {
                 labelId="file-type-label"
                 id="file-type-select"
                 value={fileType}
-                label="Tipo de Arquivo"
+                label="Operadora"
                 onChange={handleFileTypeChange}
                 disabled={loading}
                 sx={{
@@ -173,7 +277,7 @@ const Home = () => {
                 <MenuItem value=""><em>Selecione a operadora</em></MenuItem>
                 <MenuItem value="stone">Stone</MenuItem>
                 <MenuItem value="cielo">Cielo</MenuItem>
-                <MenuItem value="american">American</MenuItem>
+                <MenuItem value="american">American Express</MenuItem>
               </Select>
             </FormControl>
 
@@ -183,14 +287,14 @@ const Home = () => {
                 type="file"
                 accept=".csv"
                 onChange={handleFileUpload}
-                disabled={loading}
+                disabled={loading || !fileType}
               />
               <Button
                 variant="contained"
                 component="span"
                 startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <Upload />}
                 size="large"
-                disabled={loading}
+                disabled={loading || !fileType}
                 sx={{
                   px: 4,
                   py: 1.5,
@@ -210,6 +314,21 @@ const Home = () => {
               </Button>
             </label>
           </Box>
+
+          {/* Informações da operadora selecionada */}
+          {operadoraInfo && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+                Operadora selecionada: {operadoraInfo.name}
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 0.5 }}>
+                Formato: {operadoraInfo.format}
+              </Typography>
+              <Typography variant="body2">
+                {operadoraInfo.description}
+              </Typography>
+            </Alert>
+          )}
 
           <Accordion sx={{ mt: 2 }}>
             <AccordionSummary
@@ -266,6 +385,9 @@ const Home = () => {
             <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
               <Typography variant="body2" color="text.secondary">
                 <strong>Arquivo selecionado:</strong> {selectedFile.name} ({(selectedFile.size / 1024).toFixed(2)} KB)
+                {operadoraInfo && (
+                  <span> - <strong>Operadora:</strong> {operadoraInfo.name}</span>
+                )}
               </Typography>
             </Box>
           )}
@@ -281,9 +403,14 @@ const Home = () => {
             }}
           >
             <Typography variant="h5" gutterBottom color="primary" sx={{ mb: 3 }}>
-              Resultados da Validação
+              Resultados da Validação - {operadoraInfo?.name}
             </Typography>
-            <CsvTable rows={data} customRates={customRates} />
+            <Alert severity="success" sx={{ mb: 3 }}>
+              <Typography variant="body2">
+                📊 {data.length} registro{data.length !== 1 ? 's' : ''} processado{data.length !== 1 ? 's' : ''} com sucesso
+              </Typography>
+            </Alert>
+            {renderTable()}
           </Paper>
         )}
       </Container>
