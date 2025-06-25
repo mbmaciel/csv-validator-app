@@ -6,8 +6,11 @@ import {
   CssBaseline,
 } from "@mui/material";
 import { OperadoraProvider } from "./context/OperadoraContext";
+import { AuthProvider } from "./context/AuthContext";
 import Home from "./pages/Home";
 import Documentos from "./pages/Documentos";
+import Login from "./pages/Login";
+import PrivateRoute from "./components/PrivateRoute";
 
 // Updated theme - adjust these colors based on your logo
 const theme = createTheme({
@@ -54,14 +57,31 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <OperadoraProvider>
-        <Router>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/documentos" element={<Documentos />} />
-          </Routes>
-        </Router>
-      </OperadoraProvider>
+      <AuthProvider>
+        <OperadoraProvider>
+          <Router>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route
+                path="/"
+                element={
+                  <PrivateRoute>
+                    <Home />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/documentos"
+                element={
+                  <PrivateRoute>
+                    <Documentos />
+                  </PrivateRoute>
+                }
+              />
+            </Routes>
+          </Router>
+        </OperadoraProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }
