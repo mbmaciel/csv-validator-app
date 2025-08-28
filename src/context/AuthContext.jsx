@@ -11,16 +11,31 @@ export const AuthProvider = ({ children }) => {
     return localStorage.getItem('isAuthenticated') === 'true';
   });
 
-  const login = (username, password) => {
-    // Hardcoded credentials
-    const validUser = 'admin';
-    const validPass = 'senha123';
-    if (username === validUser && password === validPass) {
-      setIsAuthenticated(true);
-      localStorage.setItem('isAuthenticated', 'true');
-      return true;
+  const login = async (username, password) => {
+    try {
+  const response = await fetch('http://localhost:5000/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setIsAuthenticated(true);
+        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.setItem('user', JSON.stringify(data.user));
+        return true;
+      } else {
+        setIsAuthenticated(false);
+        localStorage.removeItem('isAuthenticated');
+        localStorage.removeItem('user');
+        return false;
+      }
+    } catch (error) {
+      setIsAuthenticated(false);
+      localStorage.removeItem('isAuthenticated');
+      localStorage.removeItem('user');
+      return false;
     }
-    return false;
   };
 
   const logout = () => {

@@ -3,6 +3,8 @@ const multer = require('multer');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const { Pool } = require('pg');
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -10,6 +12,11 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Configuração do PostgreSQL
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL || 'postgres://usuario:senha@localhost:5432/csvvalidator',
+});
 
 // Criar pasta files se não existir
 const filesDir = path.join(__dirname, 'files');
@@ -114,6 +121,28 @@ app.delete('/api/files/:filename', (req, res) => {
     res.status(500).json({ error: 'Erro ao deletar arquivo' });
   }
 });
+
+  // Rota de login
+  app.post('/api/login', async (req, res) => {
+    const { username, password } = req.body;
+    try {
+      const result = await pool.query(
+        'SELECT id, username, nome_completo, perfil, telefone, empresa FROM usuarios WHERE username = $1 AND password = $2',
+        [username, password]
+      );
+      if (result.rows.length === 1) {
+        // Usuário autenticado
+        return res.json({
+          success: true,
+          user: result.rows[0]
+        });
+      } else {
+        return res.status(401).json({ success: false, message: 'Usuário ou senha inválidos' });
+      }
+    } catch (error) {
+      return res.status(500).json({ success: false, message: 'Erro ao autenticar', error: error.message });
+    }
+  });
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
