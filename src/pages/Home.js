@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Papa from "papaparse";
 import CsvTable from "../components/CsvTable";
+import { useAuth } from "../context/AuthContext";
 import CsvCielo from "../components/CsvCielo";
 import AppBarComponent from "../components/AppBarComponent";
 import {
@@ -64,6 +65,7 @@ const parseCieloCsv = (csvText) => {
 };
 
 const Home = () => {
+  const { user } = useAuth();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
@@ -141,20 +143,28 @@ const Home = () => {
       
       // Upload do arquivo para o servidor
       try {
+        if (!user || !user.id) {
+          throw new Error("Você precisa estar logado para enviar arquivos.");
+        }
+
         const formData = new FormData();
         formData.append('csvFile', file);
         formData.append('fileType', fileType);
+        formData.append('userId', user.id);
 
         const response = await fetch('http://localhost:5000/api/upload', {
           method: 'POST',
           body: formData,
+          headers: {
+            'x-user': JSON.stringify(user)
+          }
         });
 
         if (response.ok) {
           const result = await response.json();
           setUploadStatus({
             type: 'success',
-            message: `Arquivo "${result.originalName}" processado e salvo com sucesso! ${parsedData.length} registros carregados.`
+            message: `Arquivo "${result.upload.filename}" processado e salvo com sucesso! ${parsedData.length} registros carregados.`
           });
         } else {
           const error = await response.json();
@@ -166,7 +176,7 @@ const Home = () => {
       } catch (serverError) {
         setUploadStatus({
           type: 'warning',
-          message: `Arquivo processado localmente (${parsedData.length} registros), mas erro de conexão com o servidor.`
+          message: `Arquivo processado localmente (${parsedData.length} registros), mas o envio falhou: ${serverError.message}`
         });
       }
     } catch (error) {

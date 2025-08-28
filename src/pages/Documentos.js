@@ -28,6 +28,7 @@ import {
   Warning
 } from '@mui/icons-material';
 import AppBarComponent from '../components/AppBarComponent';
+import { useAuth } from '../context/AuthContext';
 
 const Documentos = () => {
   const [files, setFiles] = useState([]);
@@ -35,14 +36,22 @@ const Documentos = () => {
   const [error, setError] = useState(null);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, file: null });
   const [actionLoading, setActionLoading] = useState(null);
+  const { user } = useAuth();
 
   // Função para buscar arquivos do servidor
   const fetchFiles = async () => {
+    if (!user) {
+      setError('Autenticação necessária para visualizar os documentos.');
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('http://localhost:5000/api/files');
+      const response = await fetch('http://localhost:5000/api/files', {
+        headers: { 'x-user': JSON.stringify(user) }
+      });
       
       if (response.ok) {
         const filesData = await response.json();
@@ -60,10 +69,16 @@ const Documentos = () => {
 
   // Função para fazer download do arquivo
   const handleDownload = async (filename, originalName) => {
+    if (!user) {
+      setError('Autenticação necessária para baixar o documento.');
+      return;
+    }
     try {
       setActionLoading(filename);
       
-      const response = await fetch(`http://localhost:5000/api/download/${filename}`);
+      const response = await fetch(`http://localhost:5000/api/download/${filename}`, {
+        headers: { 'x-user': JSON.stringify(user) }
+      });
       
       if (response.ok) {
         const blob = await response.blob();
@@ -87,11 +102,16 @@ const Documentos = () => {
 
   // Função para deletar arquivo
   const handleDelete = async (filename) => {
+    if (!user) {
+      setError('Autenticação necessária para excluir o documento.');
+      return;
+    }
     try {
       setActionLoading(filename);
       
       const response = await fetch(`http://localhost:5000/api/files/${filename}`, {
         method: 'DELETE',
+        headers: { 'x-user': JSON.stringify(user) }
       });
       
       if (response.ok) {
@@ -125,8 +145,10 @@ const Documentos = () => {
 
   // Carregar arquivos ao montar o componente
   useEffect(() => {
-    fetchFiles();
-  }, []);
+    if (user) {
+      fetchFiles();
+    }
+  }, [user]);
 
   return (
     <>
