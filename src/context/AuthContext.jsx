@@ -10,6 +10,10 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem('isAuthenticated') === 'true';
   });
+  const [user, setUser] = useState(() => {
+    const u = localStorage.getItem('user');
+    return u ? JSON.parse(u) : null;
+  });
 
   const login = async (username, password) => {
     try {
@@ -21,11 +25,13 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
       if (data.success) {
         setIsAuthenticated(true);
+        setUser(data.user);
         localStorage.setItem('isAuthenticated', 'true');
         localStorage.setItem('user', JSON.stringify(data.user));
         return true;
       } else {
         setIsAuthenticated(false);
+        setUser(null);
         localStorage.removeItem('isAuthenticated');
         localStorage.removeItem('user');
         return false;
@@ -39,12 +45,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    setIsAuthenticated(false);
-    localStorage.removeItem('isAuthenticated');
+  setIsAuthenticated(false);
+  setUser(null);
+  localStorage.removeItem('isAuthenticated');
+  localStorage.removeItem('user');
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

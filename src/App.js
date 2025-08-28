@@ -78,6 +78,14 @@ function App() {
                   </PrivateRoute>
                 }
               />
+              <Route
+                path="/usuarios"
+                element={
+                  <PrivateRoute>
+                    {React.createElement(require('./pages/UserAdmin.jsx').default)}
+                  </PrivateRoute>
+                }
+              />
             </Routes>
           </Router>
         </OperadoraProvider>

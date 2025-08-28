@@ -144,6 +144,70 @@ app.delete('/api/files/:filename', (req, res) => {
     }
   });
 
+  // Middleware simples para checar perfil admin
+  function requireAdmin(req, res, next) {
+    const user = req.headers['x-user'] ? JSON.parse(req.headers['x-user']) : null;
+    if (!user || user.perfil !== 'admin') {
+      return res.status(403).json({ error: 'Acesso restrito a administradores' });
+    }
+    next();
+  }
+
+  // Listar usuários
+  app.get('/api/users', requireAdmin, async (req, res) => {
+    try {
+      const result = await pool.query('SELECT id, username, perfil, nome_completo, telefone, empresa FROM usuarios ORDER BY id');
+      res.json(result.rows);
+    } catch (error) {
+      res.status(500).json({ error: 'Erro ao listar usuários' });
+    }
+  });
+
+  // Criar usuário
+  app.post('/api/users', requireAdmin, async (req, res) => {
+    const { username, password, perfil, nome_completo, telefone, empresa } = req.body;
+    try {
+      const result = await pool.query(
+        'INSERT INTO usuarios (username, password, perfil, nome_completo, telefone, empresa) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, username, perfil, nome_completo, telefone, empresa',
+        [username, password, perfil, nome_completo, telefone, empresa]
+      );
+      res.json(result.rows[0]);
+    } catch (error) {
+      res.status(500).json({ error: 'Erro ao criar usuário' });
+    }
+  });
+
+  // Editar usuário
+  app.put('/api/users/:id', requireAdmin, async (req, res) => {
+    const { username, password, perfil, nome_completo, telefone, empresa } = req.body;
+    const { id } = req.params;
+    try {
+      let query, params;
+      if (password) {
+        query = 'UPDATE usuarios SET username = $1, password = $2, perfil = $3, nome_completo = $4, telefone = $5, empresa = $6 WHERE id = $7 RETURNING id, username, perfil, nome_completo, telefone, empresa';
+        params = [username, password, perfil, nome_completo, telefone, empresa, id];
+      } else {
+        query = 'UPDATE usuarios SET username = $1, perfil = $2, nome_completo = $3, telefone = $4, empresa = $5 WHERE id = $6 RETURNING id, username, perfil, nome_completo, telefone, empresa';
+        params = [username, perfil, nome_completo, telefone, empresa, id];
+      }
+      const result = await pool.query(query, params);
+      res.json(result.rows[0]);
+    } catch (error) {
+      res.status(500).json({ error: 'Erro ao editar usuário' });
+    }
+  });
+
+  // Apagar usuário
+  app.delete('/api/users/:id', requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+      await pool.query('DELETE FROM usuarios WHERE id = $1', [id]);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Erro ao apagar usuário' });
+    }
+  });
+
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });

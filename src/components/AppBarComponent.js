@@ -37,7 +37,7 @@ const LogoImage = styled('img')({
 const AppBarComponent = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useAuth();
+  const { logout, isAuthenticated, user } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -52,7 +52,12 @@ const AppBarComponent = () => {
       text: 'Documentos',
       path: '/documentos',
       icon: <InsertDriveFile />
-    }
+    },
+    ...(user && user.perfil === 'admin' ? [{
+      text: 'Usuários',
+      path: '/usuarios',
+      icon: <InsertDriveFile />
+    }] : [])
   ];
 
   const handleNavigate = (path) => {
